@@ -1,4 +1,4 @@
 [build]
-# Compile for Cortex-A9 (soft-float ABI). This is a Tier 3 target for Rust as per
+# Compile for Cortex-A9 (soft-float ABI). This is a Tier 2 target for Rust as per
 # https://forge.rust-lang.org/release/platform-support.html
 target = "armv7a-none-eabi"

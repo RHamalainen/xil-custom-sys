@@ -1,32 +1,24 @@
-use std::{fs, path, ffi, env, process};
+//! This script creates foreign function interface to C board support package.
 
-const XILINX_SDK_ENV_VAR_NAME: &str = "XILINX_SDK";
-const XILINX_ENV_VAR_NAME: &str = "XILINX";
-const DEFAULT_XILINX_WIN_PATH: &str = "/c/Xilinx";
-const DEFAULT_XILINX_LIN_PATH: &str = "/opt/Xilinx";
-const SDK_DIR_NAME: &str = "SDK";
-const DEFAULT_XILINX_SDK_VERSION: &str = "2019.1";
+mod validators;
 
-const PYNQ_XCOMPILER_PROVIDER: &str = "gnu";
-const PYNQ_XCOMPILER_ARCH: &str = "aarch32";
-#[cfg(not(windows))]
-const PYNQ_XCOMPILER_OS: &str = "lin";
-#[cfg(windows)]
-const PYNQ_XCOMPILER_OS: &str = "nt";
-const PYNQ_XCOMPILER_TOOL_NAME: &str = "gcc-arm-none-eabi";
-const PYNQ_XCOMPILER_NAME: &str = "arm-none-eabi";
-const LIBC_H_RELATIVE_LOCATION: &str = "libc/usr/include/linux";
-const STDINT_H_RELATIVE_LOCATION: &str = "libc/usr/include";
+use bindgen::Bindings;
+use glob::glob;
+use std::{
+    collections::HashSet,
+    env,
+    path::{Path, PathBuf},
+    process::exit,
+};
+use validators::{validate_path_to_directory, validate_path_to_file};
 
+const EXIT_FAILURE: i32 = 1;
 const LIBRARY_NAME: &str = "xil_sf";
+const PATH_WRAPPER: &str = "./wrapper.h";
+const PATH_XIL_HEADERS: &str = "./include/";
+const PATH_XIL_BSP: &str = "./libsrc/";
 
-static C_FLAGS: &[&str] = &[
-   "-mcpu=cortex-a9",
-   "-mfpu=vfpv3",
-   "-mfloat-abi=soft",
-   "-nostartfiles",
-];
-
+/*
 /// Guess the Xilinx SDK install path like ".../Xilinx/SDK/version"
 fn guess_xil_sdk_path() -> path::PathBuf {
     // If XILINX_SDK environment variable exists, use that
@@ -123,155 +115,128 @@ fn locate_xil_sdk_path() -> path::PathBuf {
 
     xil_dir.to_path_buf()
 }
+*/
 
+/*
 /// Get paths to compile
-fn get_src_paths() -> Vec<path::PathBuf> {
-    // How on earth you make a globally accessible Path in rust? Is it even possible?
-    // I'll make a function that returns a constant pathbuf then
-    let root_path = path::PathBuf::from("libsrc");
-    let sub_paths = root_path.read_dir().expect("Unable to read libsrc directory").filter_map(|entry| {
-        let entry = entry.expect("Unable to read file from directory");
-        let path = entry.path();
+fn get_src_paths(path_libsrc: &Path) -> Vec<PathBuf> {
+    // How on earth you make a globally accessible Path in rust? Is it even
+    // possible? I'll make a function that returns a constant pathbuf then
 
-        // Ignore files at root-level
-        if path.is_file() {
-            return None;
-        }
+    path_libsrc
+        .read_dir()
+        .expect("Unable to read libsrc directory")
+        .filter_map(|entry| {
+            let entry = entry.expect("Unable to read file from directory");
+            let path = entry.path();
 
-        // All paths include this intermediary src/
-        let path = path.join("src/");
+            // Ignore files at root-level
+            if path.is_file() {
+                return None;
+            }
 
-        Some(path.clone())
-    }).collect::<Vec<path::PathBuf>>();
+            // All paths include this intermediary src/
+            let path = path.join("src/");
 
-    sub_paths
+            Some(path)
+        })
+        .collect_vec()
+    //.collect::<Vec<path::PathBuf>>();
 }
 
-fn src_files(path: &path::PathBuf) -> Vec<path::PathBuf> {
+fn src_files(path: &Path) -> Vec<PathBuf> {
     let ignore_files = vec![];
 
     let c_ext = Some(ffi::OsStr::new("c"));
     let asm_ext = Some(ffi::OsStr::new("S"));
 
-    if path.is_file() {  // Single files can be compiled too, though idk why someone wants that
+    /*if path.is_file() {
+        // Single files can be compiled too, though idk why someone wants that
         let ext = path.extension();
         match ext {
-            e if e==c_ext => {return vec![path.clone()];},
+            e if e == c_ext => {
+                return vec![path.clone()];
+            }
             _ => panic!("Invalid file extension on source file."),
         }
-    }
-    else if path.is_dir() {
-        path.read_dir()
-            .expect(&format!("Unable to read directory: {}", path.to_str().unwrap()))
-            .filter_map(|entry| {
-                let entry = entry.expect("Unable to read a file from directory");
+    } else if path.is_dir() {*/
+    path.read_dir()
+        .expect(&format!(
+            "Unable to read directory: {}",
+            path.to_str().unwrap()
+        ))
+        .filter_map(|entry| {
+            let entry = entry.expect("Unable to read a file from directory");
 
-                let path = entry.path();
+            let path = entry.path();
 
-                // Ignore directories
-                if path.is_dir() {
-                    return None;
-                }
+            // Ignore directories
+            if path.is_dir() {
+                return None;
+            }
 
-                // Ignore Files
-                if ignore_files.contains(&path.file_name()) {
-                    return None;
-                }
+            // Ignore Files
+            if ignore_files.contains(&path.file_name()) {
+                return None;
+            }
 
-                // We only care about .c and .S
-                let ext = path.extension();
-                if ext == c_ext || ext == asm_ext {
-                    Some(path.clone())
-                } else {
-                    None
-                }
-            }).collect::<Vec<path::PathBuf>>()
-    }
-    else {panic!("Uh oh")}
+            // We only care about .c and .S
+            let ext = path.extension();
+            if ext == c_ext || ext == asm_ext {
+                Some(path.clone())
+            } else {
+                None
+            }
+        })
+        .collect_vec()
+    //.collect::<Vec<PathBuf>>()
+    /*} else {
+        panic!("Uh oh")
+    }*/
 }
+*/
 
-fn compile() {
-    let mut c_files = Vec::new();
-    let mut builder = cc::Build::new();
-
-    // Add the root include directory
-    builder.include("include/");
-
-    for path in get_src_paths().iter() {
-        let c = src_files(path);
-        c_files.extend(c);
-        builder.include(&path);
-    }
-
-    builder.archiver("arm-none-eabi-ar")
-    .pic(false)
-    .warnings(false);
-
-
-    for flag in C_FLAGS {
-        builder.flag(flag);
-    }
-
-    // Compile C Files
-    builder.compiler("arm-none-eabi-gcc")
-        .files(c_files)
-        .opt_level_str("2")
-        .flag("-c")
-        .compile(LIBRARY_NAME);
-}
-
-fn generate_bindings() {
-    // Locate the Xilinx toolchain directory (like ".../Xilinx/SDK/2019.1"), or
-    // prompt the user for it
-    let xil_sdk_dir = locate_xil_sdk_path();
-
-    // Like so: "$(XILINX_PATH)/gnu/aarch32/lin/gcc-arm-none-eabi/arm-none-eabi/
-    // libc/usr/include"
-    let xcompiler_path: path::PathBuf = [
-        xil_sdk_dir
-            .into_os_string()
+fn generate_bindings(
+    path_libc: &Path,
+    path_stdint: &Path,
+    path_xil_headers: &Path,
+    path_wrapper: &Path,
+) -> Bindings {
+    let include_libc = format!(
+        "-I{}",
+        path_libc
             .to_str()
-            .expect("path needs to be UTF-8"),
-        PYNQ_XCOMPILER_PROVIDER,
-        PYNQ_XCOMPILER_ARCH,
-        PYNQ_XCOMPILER_OS,
-        PYNQ_XCOMPILER_TOOL_NAME,
-        PYNQ_XCOMPILER_NAME,
-    ]
-    .iter()
-    .collect();
+            .expect("Path to libc must be valid UTF-8.")
+    );
+    let include_stdint = format!(
+        "-I{}",
+        path_stdint
+            .to_str()
+            .expect("Path to stdint must be valid UTF-8.")
+    );
+    let include_xil = format!(
+        "-I{}",
+        path_xil_headers
+            .to_str()
+            .expect("Path to BSP headers must be valid UTF-8.")
+    );
+    let header = path_wrapper
+        .to_str()
+        .expect("Path to wrapper must be valid UTF-8.");
 
-    if !xcompiler_path.exists() {
-        eprintln!(
-            "the path for cross-compiler does not exist at {:?}",
-            xcompiler_path
-        );
-        process::exit(1)
-    }
-
-    let libc_h_path: path::PathBuf = xcompiler_path.join(LIBC_H_RELATIVE_LOCATION);
-
-    let stdint_h_path: path::PathBuf = xcompiler_path.join(STDINT_H_RELATIVE_LOCATION);
-
-    let bindings = bindgen::Builder::default()
-        // Set-up cross-compilation
+    bindgen::Builder::default()
+        // Set-up cross-compilation.
         .clang_arg("-target")
         .clang_arg("armv7a-none-eabi")
-        // Include Xilinx cross-compiler libc headers
-        .clang_arg(&format!(
-            "-I{}",
-            libc_h_path.to_str().expect("path needs to be UTF-8")
-        ))
-        .clang_arg(&format!(
-            "-I{}",
-            stdint_h_path.to_str().expect("path needs to be UTF-8")
-        ))
-        // The input header we would like to generate
-        // bindings for.
-        .header("wrapper.h")
-        // BSP includes
-        .clang_arg("-I./include")
-        // Use core instead of std to retain no_std compatibility
+        // Include Xilinx cross-compiler libc headers.
+        .clang_arg(&include_libc)
+        // Include Xilinx cross-compiler stdint headers.
+        .clang_arg(&include_stdint)
+        // Include Xilinx headers.
+        .clang_arg(&include_xil)
+        // The input header we would like to generate bindings for.
+        .header(header)
+        // Use core instead of std to retain no_std compatibility.
         .use_core()
         .ctypes_prefix("cty")
         // Do not generate tests, because I can't be bothered to set up #[test] in the build
@@ -283,23 +248,207 @@ fn generate_bindings() {
         // Finish the builder and generate the bindings.
         .generate()
         // Unwrap the Result and panic on failure.
-        .expect("Unable to generate bindings");
+        .expect("Failed to generate bindings.")
+}
 
-    // Write the bindings to the $OUT_DIR/xil.rs file.
-    let out_path = path::PathBuf::from(env::var("OUT_DIR").unwrap());
-    bindings
-        .write_to_file(out_path.join("bindings.rs"))
-        .expect("Couldn't write bindings!");
+fn compile(
+    path_archiver: &Path,
+    path_compiler: &Path,
+    path_xil_headers: &Path,
+    xil_bsp_header_search_paths: Vec<PathBuf>,
+    xil_bsp_source_paths: Vec<PathBuf>,
+) {
+    //let mut c_files = Vec::new();
+    let mut builder = cc::Build::new();
 
+    /*for path in xil_bsp_header_search_paths {
+        builder.include(path);
+    }*/
+
+    /*for path in xil_bsp_source_paths {
+        builder.file(path);
+    }*/
+
+    /*for path in get_src_paths(path_bsp_sources).iter() {
+        let c = src_files(path);
+        c_files.extend(c);
+        builder.include(path);
+    }*/
+
+    //println!("cargo:warning=Included {} C-files.", c_files.len());
+
+    // Compile BSP's C-files.
+    builder
+        .compiler(path_compiler)
+        .archiver(path_archiver)
+        // Add files which are compiled.
+        .files(xil_bsp_source_paths)
+        // Add BSP headers to header search path.
+        .include(path_xil_headers)
+        .includes(xil_bsp_header_search_paths)
+        //.files(paths_xil_bsp_sources)
+        // Disable warning flags.
+        .warnings(false)
+        // Disable position independent code.
+        .pic(false)
+        // Set name of the target processor.
+        .flag("-mcpu=cortex-a9")
+        // Set name of the floating-point hardware.
+        .flag("-mfpu=vfpv3")
+        // Execute floating point operations using library calls.
+        .flag("-mfloat-abi=soft")
+        // Disable generation of standard runtime.
+        .flag("-nostartfiles")
+        .opt_level_str("2")
+        // Compile or assemble the source files, but do not link.
+        // Generates object file for each source file.
+        .flag("-c")
+        .compile(LIBRARY_NAME);
+}
+
+fn error_missing_environment_variable(name: &str) -> String {
+    format!("Missing environment variable: \"{}\".", name)
+}
+
+fn get_path(environment_variable: &str) -> PathBuf {
+    let path = match env::var(environment_variable) {
+        Ok(path) => path,
+        Err(err) => {
+            let message = error_missing_environment_variable(environment_variable);
+            println!("cargo:warning={} Error: {}.", message, err);
+            exit(EXIT_FAILURE);
+        }
+    };
+    Path::new(&path).to_path_buf()
 }
 
 fn main() {
-    // Tell cargo to invalidate the built crate whenever the wrapper changes.
+    println!("cargo:rerun-if-changed=lib.rs");
     println!("cargo:rerun-if-changed=wrapper.h");
+    println!("cargo:rerun-if-changed=Cargo.toml");
+    println!("cargo:rerun-if-changed={}", PATH_XIL_HEADERS);
+    println!("cargo:rerun-if-changed={}", PATH_XIL_BSP);
+    println!("cargo:rerun-if-env-changed=OUT_DIR");
+    println!("cargo:rerun-if-env-changed=PATH_GNU_BINARIES");
+    println!("cargo:rerun-if-env-changed=PATH_LIBC");
+    println!("cargo:rerun-if-env-changed=PATH_STDINT");
 
-    // Generate bindings.rs
-    generate_bindings();
+    let path_output = get_path("OUT_DIR");
+    let path_binaries = get_path("PATH_GNU_BINARIES");
+    let path_libc = get_path("PATH_LIBC");
+    let path_stdint = get_path("PATH_STDINT");
 
-    // Compile libxil.a
-    compile();
+    let path_wrapper = Path::new(PATH_WRAPPER);
+    let path_xil_headers = Path::new(PATH_XIL_HEADERS);
+    let path_xil_bsp = Path::new(PATH_XIL_BSP);
+
+    validate_path_to_directory(&path_output, "Path to output");
+    validate_path_to_directory(&path_binaries, "Path to GNU binaries");
+    validate_path_to_directory(&path_libc, "Path to libc");
+    validate_path_to_directory(&path_stdint, "Path to stdint");
+
+    validate_path_to_file(path_wrapper, "Path to wrapper");
+    validate_path_to_directory(&path_xil_headers, "Path to XIL headers");
+    validate_path_to_directory(&path_xil_bsp, "Path to XIL BSP");
+
+    let path_compiler = path_binaries.join("arm-none-eabi-gcc.exe");
+    let path_compiler = path_compiler.as_path();
+    if path_to_file_is_valid(path_compiler, "Path to compiler") {
+        println!("cargo:warning=Path to compiler is valid. Continuing build.");
+    } else {
+        println!("cargo:warning=Path to compiler is not valid. Stopping build.");
+        exit(EXIT_FAILURE);
+    }
+
+    let path_archiver = path_binaries.join("arm-none-eabi-ar.exe");
+    let path_archiver = path_archiver.as_path();
+    if path_to_file_is_valid(path_archiver, "Path to archiver") {
+        println!("cargo:warning=Path to archiver is valid. Continuing build.");
+    } else {
+        println!("cargo:warning=Path to archiver is not valid. Stopping build.");
+        exit(EXIT_FAILURE);
+    }
+
+    let pattern = format!("{}**/*.h", PATH_XIL_BSP);
+    let paths_xil_bsp_headers_glob = match glob(&pattern) {
+        Ok(paths) => paths,
+        Err(err) => {
+            println!(
+                "cargo:warning=Failed to find XIL BSP headers using pattern: {}. Error: {}.",
+                pattern, err
+            );
+            exit(EXIT_FAILURE);
+        }
+    };
+    let mut paths_xil_bsp_headers: Vec<PathBuf> = Vec::new();
+    for path in paths_xil_bsp_headers_glob {
+        let path = match path {
+            Ok(path) => path,
+            Err(err) => {
+                println!(
+                    "cargo:warning=Failed to add XIL BSP header path. Error: {}.",
+                    err
+                );
+                exit(EXIT_FAILURE);
+            }
+        };
+        paths_xil_bsp_headers.push(path);
+    }
+    let mut xil_bsp_header_search_paths = HashSet::new();
+    for path in paths_xil_bsp_headers {
+        let parent = path
+            .parent()
+            .expect("Path to a header must have a parent.")
+            .to_path_buf();
+        //println!("cargo:warning={}", parent.display());
+        if xil_bsp_header_search_paths.insert(parent.clone()) {
+            println!("cargo:warning=Added {}.", parent.display());
+        } else {
+            //println!("cargo:warning=Not added.");
+        }
+    }
+    let xil_bsp_header_search_paths = Vec::from_iter(xil_bsp_header_search_paths);
+
+    let pattern = format!("{}**/*.[cSs]", PATH_XIL_BSP);
+    let paths_xil_bsp_sources = match glob(&pattern) {
+        Ok(paths) => paths,
+        Err(err) => {
+            println!(
+                "cargo:warning=Failed to find XIL BSP source files using pattern: {}. Error: {}.",
+                pattern, err
+            );
+            exit(EXIT_FAILURE);
+        }
+    };
+    let mut xil_bsp_source_paths = Vec::new();
+    for path in paths_xil_bsp_sources {
+        let path = match path {
+            Ok(path) => path,
+            Err(err) => {
+                println!(
+                    "cargo:warning=Failed to add XIL BSP source path. Error: {}.",
+                    err
+                );
+                exit(EXIT_FAILURE);
+            }
+        };
+        xil_bsp_source_paths.push(path.clone());
+    }
+
+    let bindings = generate_bindings(path_libc, path_stdint, path_xil_headers, path_wrapper);
+    println!("cargo:warning=Bindings generated!");
+
+    // Write the bindings to the $OUT_DIR/bindings.rs file.
+    bindings
+        .write_to_file(path_output.join("bindings.rs"))
+        .expect("Couldn't write bindings!");
+
+    compile(
+        path_archiver,
+        path_compiler,
+        path_xil_headers,
+        xil_bsp_header_search_paths,
+        xil_bsp_source_paths,
+    );
+    println!("cargo:warning=Compiled libxil.a successfully!");
 }

@@ -1,10 +1,11 @@
 #![no_std]
-#![feature(asm)]
-// Allow C-style conventions
+// Allow C-style conventions.
 #![allow(non_upper_case_globals, non_camel_case_types, non_snake_case)]
 #![allow(clippy::redundant_static_lifetimes)]
 
-// Include the generated bindings
+use core::arch::asm;
+
+// Include the generated bindings.
 include!(concat!(env!("OUT_DIR"), "/bindings.rs"));
 
 pub const XPAR_XGPIOPS_0_INTR: u32 = XPS_GPIO_INT_ID;
@@ -104,7 +105,7 @@ pub unsafe fn XTtcPs_ClearInterruptStatus(InstancePtr: *mut XTtcPs, InterruptMas
  *
  * # Safety
  * Passing a null-ptr as `InstancePtr`is undefined behavior.
- ***********************************
+ ********************************
  * **** */
 pub unsafe fn XTtcPs_Start(InstancePtr: *mut XTtcPs) {
     InstWriteReg(
