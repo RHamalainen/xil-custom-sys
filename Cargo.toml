@@ -1,9 +1,11 @@
 [package]
 name = "xil-sys"
-version = "0.1.0"
-authors = ["Henri Lunnikivi <henri.lunnikivi@tuni.fi>"]
+version = "0.2.0"
+authors = [
+    "Henri Lunnikivi <henri.lunnikivi@tuni.fi> Roni Hämäläinen <roni.hamalainen@tuni.fi>",
+]
 description = "FFI bindings to a custom built libxil."
-edition = "2021"
+edition = "2018"
 readme = "README.md"
 
 links = "xil_sf"
@@ -13,10 +15,13 @@ name = "xil_sys"
 path = "lib.rs"
 
 [build-dependencies]
+#bindgen = "0.55.1"
+bindgen = "0.59.2"
+#bindgen = "0.61.0"
+
 cc = "1.0.73"
-bindgen = "0.61.0"
-itertools = "0.10.5"
 glob = "0.3.0"
+itertools = "0.10.5"
 
 [dependencies]
 # Aliases for C-types.

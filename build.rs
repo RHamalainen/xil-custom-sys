@@ -4,12 +4,9 @@ mod validators;
 
 use bindgen::Bindings;
 use glob::glob;
-use std::{
-    collections::HashSet,
-    env,
-    path::{Path, PathBuf},
-    process::exit,
-};
+use itertools::Itertools;
+use std::ffi::{OsStr, OsString};
+use std::{collections::HashSet, env, iter::FromIterator, path::PathBuf, process::exit};
 use validators::{validate_path_to_directory, validate_path_to_file};
 
 const EXIT_FAILURE: i32 = 1;
@@ -117,9 +114,8 @@ fn locate_xil_sdk_path() -> path::PathBuf {
 }
 */
 
-/*
 /// Get paths to compile
-fn get_src_paths(path_libsrc: &Path) -> Vec<PathBuf> {
+fn get_src_paths(path_libsrc: &PathBuf) -> Vec<PathBuf> {
     // How on earth you make a globally accessible Path in rust? Is it even
     // possible? I'll make a function that returns a constant pathbuf then
 
@@ -144,11 +140,11 @@ fn get_src_paths(path_libsrc: &Path) -> Vec<PathBuf> {
     //.collect::<Vec<path::PathBuf>>();
 }
 
-fn src_files(path: &Path) -> Vec<PathBuf> {
+fn src_files(path: &PathBuf) -> Vec<PathBuf> {
     let ignore_files = vec![];
 
-    let c_ext = Some(ffi::OsStr::new("c"));
-    let asm_ext = Some(ffi::OsStr::new("S"));
+    let c_ext = Some(OsStr::new("c"));
+    let asm_ext = Some(OsStr::new("S"));
 
     /*if path.is_file() {
         // Single files can be compiled too, though idk why someone wants that
@@ -194,13 +190,12 @@ fn src_files(path: &Path) -> Vec<PathBuf> {
         panic!("Uh oh")
     }*/
 }
-*/
 
 fn generate_bindings(
-    path_libc: &Path,
-    path_stdint: &Path,
-    path_xil_headers: &Path,
-    path_wrapper: &Path,
+    path_libc: &PathBuf,
+    path_stdint: &PathBuf,
+    path_xil_headers: &PathBuf,
+    path_wrapper: &PathBuf,
 ) -> Bindings {
     let include_libc = format!(
         "-I{}",
@@ -252,9 +247,9 @@ fn generate_bindings(
 }
 
 fn compile(
-    path_archiver: &Path,
-    path_compiler: &Path,
-    path_xil_headers: &Path,
+    path_archiver: &PathBuf,
+    path_compiler: &PathBuf,
+    path_xil_headers: &PathBuf,
     xil_bsp_header_search_paths: Vec<PathBuf>,
     xil_bsp_source_paths: Vec<PathBuf>,
 ) {
@@ -269,11 +264,13 @@ fn compile(
         builder.file(path);
     }*/
 
-    /*for path in get_src_paths(path_bsp_sources).iter() {
+    let mut c_files = Vec::new();
+    let path_bsp_sources = PathBuf::from("libsrc");
+    for path in get_src_paths(&path_bsp_sources).iter() {
         let c = src_files(path);
         c_files.extend(c);
         builder.include(path);
-    }*/
+    }
 
     //println!("cargo:warning=Included {} C-files.", c_files.len());
 
@@ -282,7 +279,8 @@ fn compile(
         .compiler(path_compiler)
         .archiver(path_archiver)
         // Add files which are compiled.
-        .files(xil_bsp_source_paths)
+        .files(c_files)
+        //.files(xil_bsp_source_paths)
         // Add BSP headers to header search path.
         .include(path_xil_headers)
         .includes(xil_bsp_header_search_paths)
@@ -319,7 +317,7 @@ fn get_path(environment_variable: &str) -> PathBuf {
             exit(EXIT_FAILURE);
         }
     };
-    Path::new(&path).to_path_buf()
+    PathBuf::from(&path)
 }
 
 fn main() {
@@ -329,45 +327,53 @@ fn main() {
     println!("cargo:rerun-if-changed={}", PATH_XIL_HEADERS);
     println!("cargo:rerun-if-changed={}", PATH_XIL_BSP);
     println!("cargo:rerun-if-env-changed=OUT_DIR");
-    println!("cargo:rerun-if-env-changed=PATH_GNU_BINARIES");
+    /*println!("cargo:rerun-if-env-changed=PATH_GNU_BINARIES");
     println!("cargo:rerun-if-env-changed=PATH_LIBC");
-    println!("cargo:rerun-if-env-changed=PATH_STDINT");
+    println!("cargo:rerun-if-env-changed=PATH_STDINT");*/
 
     let path_output = get_path("OUT_DIR");
-    let path_binaries = get_path("PATH_GNU_BINARIES");
+    /*let path_binaries = get_path("PATH_GNU_BINARIES");
     let path_libc = get_path("PATH_LIBC");
-    let path_stdint = get_path("PATH_STDINT");
+    let path_stdint = get_path("PATH_STDINT");*/
 
-    let path_wrapper = Path::new(PATH_WRAPPER);
-    let path_xil_headers = Path::new(PATH_XIL_HEADERS);
-    let path_xil_bsp = Path::new(PATH_XIL_BSP);
+    let path_binaries =
+        PathBuf::from("/home/roni/xilinx/Vitis/2022.2/gnu/aarch32/lin/gcc-arm-none-eabi/bin");
+    let path_libc = PathBuf::from("/home/roni/xilinx/Vitis/2022.2/gnu/aarch32/lin/gcc-arm-none-eabi/aarch32-xilinx-eabi/usr/include");
+    let path_stdint = PathBuf::from("/home/roni/xilinx/Vitis/2022.2/gnu/aarch32/lin/gcc-arm-none-eabi/aarch32-xilinx-eabi/usr/lib");
+
+    let path_wrapper = PathBuf::from(PATH_WRAPPER);
+    let path_xil_headers = PathBuf::from(PATH_XIL_HEADERS);
+    let path_xil_bsp = PathBuf::from(PATH_XIL_BSP);
 
     validate_path_to_directory(&path_output, "Path to output");
     validate_path_to_directory(&path_binaries, "Path to GNU binaries");
     validate_path_to_directory(&path_libc, "Path to libc");
     validate_path_to_directory(&path_stdint, "Path to stdint");
 
-    validate_path_to_file(path_wrapper, "Path to wrapper");
+    validate_path_to_file(&path_wrapper, "Path to wrapper");
     validate_path_to_directory(&path_xil_headers, "Path to XIL headers");
     validate_path_to_directory(&path_xil_bsp, "Path to XIL BSP");
 
-    let path_compiler = path_binaries.join("arm-none-eabi-gcc.exe");
-    let path_compiler = path_compiler.as_path();
-    if path_to_file_is_valid(path_compiler, "Path to compiler") {
+    let path_compiler = path_binaries.join("arm-none-eabi-gcc");
+    //let path_compiler = path_compiler.as_path();
+    validate_path_to_file(&path_compiler, "Path to compiler");
+
+    /*if path_to_file_is_valid(path_compiler, "Path to compiler") {
         println!("cargo:warning=Path to compiler is valid. Continuing build.");
     } else {
         println!("cargo:warning=Path to compiler is not valid. Stopping build.");
         exit(EXIT_FAILURE);
-    }
+    }*/
 
-    let path_archiver = path_binaries.join("arm-none-eabi-ar.exe");
-    let path_archiver = path_archiver.as_path();
-    if path_to_file_is_valid(path_archiver, "Path to archiver") {
+    let path_archiver = path_binaries.join("arm-none-eabi-ar");
+    //let path_archiver = path_archiver.as_path();
+    validate_path_to_file(&path_archiver, "Path to archiver");
+    /*if path_to_file_is_valid(path_archiver, "Path to archiver") {
         println!("cargo:warning=Path to archiver is valid. Continuing build.");
     } else {
         println!("cargo:warning=Path to archiver is not valid. Stopping build.");
         exit(EXIT_FAILURE);
-    }
+    }*/
 
     let pattern = format!("{}**/*.h", PATH_XIL_BSP);
     let paths_xil_bsp_headers_glob = match glob(&pattern) {
@@ -435,7 +441,7 @@ fn main() {
         xil_bsp_source_paths.push(path.clone());
     }
 
-    let bindings = generate_bindings(path_libc, path_stdint, path_xil_headers, path_wrapper);
+    let bindings = generate_bindings(&path_libc, &path_stdint, &path_xil_headers, &path_wrapper);
     println!("cargo:warning=Bindings generated!");
 
     // Write the bindings to the $OUT_DIR/bindings.rs file.
@@ -444,9 +450,9 @@ fn main() {
         .expect("Couldn't write bindings!");
 
     compile(
-        path_archiver,
-        path_compiler,
-        path_xil_headers,
+        &path_archiver,
+        &path_compiler,
+        &path_xil_headers,
         xil_bsp_header_search_paths,
         xil_bsp_source_paths,
     );

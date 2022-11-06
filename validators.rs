@@ -1,8 +1,13 @@
 use crate::EXIT_FAILURE;
-use std::{path::Path, process::exit};
+use std::{path::PathBuf, process::exit};
 
-pub fn validate_path_to_directory(path: &Path, description: &str) {
-    match path.try_exists() {
+pub fn validate_path_to_directory(path: &PathBuf, description: &str) {
+    if path.exists() && path.is_dir() {
+        return;
+    }
+    exit(EXIT_FAILURE);
+
+    /*match path.try_exists() {
         Ok(true) => {
             println!("cargo:warning={} exists. Continuing build", description);
         }
@@ -32,10 +37,15 @@ pub fn validate_path_to_directory(path: &Path, description: &str) {
             description
         );
         exit(EXIT_FAILURE);
-    }
+    }*/
 }
 
-pub fn validate_path_to_file(path: &Path, description: &str) {
+pub fn validate_path_to_file(path: &PathBuf, description: &str) {
+    if path.exists() && path.is_file() {
+        return;
+    }
+    exit(EXIT_FAILURE);
+    /*
     match path.try_exists() {
         Ok(true) => {
             println!("cargo:warning={} exists. Continuing build.", description);
@@ -66,5 +76,5 @@ pub fn validate_path_to_file(path: &Path, description: &str) {
             description
         );
         exit(EXIT_FAILURE);
-    }
+    }*/
 }

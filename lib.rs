@@ -1,9 +1,8 @@
 #![no_std]
+#![feature(asm)]
 // Allow C-style conventions.
 #![allow(non_upper_case_globals, non_camel_case_types, non_snake_case)]
 #![allow(clippy::redundant_static_lifetimes)]
-
-use core::arch::asm;
 
 // Include the generated bindings.
 include!(concat!(env!("OUT_DIR"), "/bindings.rs"));
@@ -105,7 +104,7 @@ pub unsafe fn XTtcPs_ClearInterruptStatus(InstancePtr: *mut XTtcPs, InterruptMas
  *
  * # Safety
  * Passing a null-ptr as `InstancePtr`is undefined behavior.
- ********************************
+ ******************************
  * **** */
 pub unsafe fn XTtcPs_Start(InstancePtr: *mut XTtcPs) {
     InstWriteReg(
