@@ -1,4 +1,4 @@
-Copyright 2020 Henri Lunnikivi
+Copyright 2020 Henri Lunnikivi, 2022 Roni Hämäläinen
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
