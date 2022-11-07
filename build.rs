@@ -192,12 +192,12 @@ fn src_files(path: &PathBuf) -> Vec<PathBuf> {
 }
 
 fn generate_bindings(
-    path_libc: &PathBuf,
-    path_stdint: &PathBuf,
+    path_inc: &PathBuf,
+    path_lib: &PathBuf,
     path_xil_headers: &PathBuf,
     path_wrapper: &PathBuf,
 ) -> Bindings {
-    let include_libc = format!(
+    /*let include_libc = format!(
         "-I{}",
         path_libc
             .to_str()
@@ -208,7 +208,7 @@ fn generate_bindings(
         path_stdint
             .to_str()
             .expect("Path to stdint must be valid UTF-8.")
-    );
+    );*/
     let include_xil = format!(
         "-I{}",
         path_xil_headers
@@ -224,9 +224,11 @@ fn generate_bindings(
         .clang_arg("-target")
         .clang_arg("armv7a-none-eabi")
         // Include Xilinx cross-compiler libc headers.
-        .clang_arg(&include_libc)
+        //.clang_arg(&include_libc)
+        .clang_arg(format!("-I{}", path_inc.display()))
         // Include Xilinx cross-compiler stdint headers.
-        .clang_arg(&include_stdint)
+        //.clang_arg(&include_stdint)
+        .clang_arg(format!("-I{}", path_lib.display()))
         // Include Xilinx headers.
         .clang_arg(&include_xil)
         // The input header we would like to generate bindings for.
@@ -327,34 +329,46 @@ fn main() {
     println!("cargo:rerun-if-changed={}", PATH_XIL_HEADERS);
     println!("cargo:rerun-if-changed={}", PATH_XIL_BSP);
     println!("cargo:rerun-if-env-changed=OUT_DIR");
+    println!("cargo:rerun-if-env-changed=PATH_GNU_BIN");
+    println!("cargo:rerun-if-env-changed=PATH_GNU_INC");
+    println!("cargo:rerun-if-env-changed=PATH_GNU_LIB");
+
     /*println!("cargo:rerun-if-env-changed=PATH_GNU_BINARIES");
     println!("cargo:rerun-if-env-changed=PATH_LIBC");
     println!("cargo:rerun-if-env-changed=PATH_STDINT");*/
 
     let path_output = get_path("OUT_DIR");
+    let path_bin = get_path("PATH_GNU_BIN");
+    let path_inc = get_path("PATH_GNU_INC");
+    let path_lib = get_path("PATH_GNU_LIB");
+
     /*let path_binaries = get_path("PATH_GNU_BINARIES");
     let path_libc = get_path("PATH_LIBC");
     let path_stdint = get_path("PATH_STDINT");*/
 
-    let path_binaries =
+    /*let path_binaries =
         PathBuf::from("/home/roni/xilinx/Vitis/2022.2/gnu/aarch32/lin/gcc-arm-none-eabi/bin");
     let path_libc = PathBuf::from("/home/roni/xilinx/Vitis/2022.2/gnu/aarch32/lin/gcc-arm-none-eabi/aarch32-xilinx-eabi/usr/include");
     let path_stdint = PathBuf::from("/home/roni/xilinx/Vitis/2022.2/gnu/aarch32/lin/gcc-arm-none-eabi/aarch32-xilinx-eabi/usr/lib");
+    */
 
     let path_wrapper = PathBuf::from(PATH_WRAPPER);
     let path_xil_headers = PathBuf::from(PATH_XIL_HEADERS);
     let path_xil_bsp = PathBuf::from(PATH_XIL_BSP);
 
     validate_path_to_directory(&path_output, "Path to output");
-    validate_path_to_directory(&path_binaries, "Path to GNU binaries");
-    validate_path_to_directory(&path_libc, "Path to libc");
-    validate_path_to_directory(&path_stdint, "Path to stdint");
+    validate_path_to_directory(&path_bin, "Path to GNU binaries");
+    validate_path_to_directory(&path_inc, "Path to GNU includes");
+    validate_path_to_directory(&path_lib, "Path to GNU libraries");
 
     validate_path_to_file(&path_wrapper, "Path to wrapper");
     validate_path_to_directory(&path_xil_headers, "Path to XIL headers");
     validate_path_to_directory(&path_xil_bsp, "Path to XIL BSP");
 
-    let path_compiler = path_binaries.join("arm-none-eabi-gcc");
+    #[cfg(unix)]
+    let path_compiler = path_bin.join("arm-none-eabi-gcc");
+    #[cfg(windows)]
+    let path_compiler = path_bin.join("arm-none-eabi-gcc.exe");
     //let path_compiler = path_compiler.as_path();
     validate_path_to_file(&path_compiler, "Path to compiler");
 
@@ -365,7 +379,10 @@ fn main() {
         exit(EXIT_FAILURE);
     }*/
 
-    let path_archiver = path_binaries.join("arm-none-eabi-ar");
+    #[cfg(unix)]
+    let path_archiver = path_bin.join("arm-none-eabi-ar");
+    #[cfg(windows)]
+    let path_archiver = path_bin.join("arm-none-eabi-ar.exe");
     //let path_archiver = path_archiver.as_path();
     validate_path_to_file(&path_archiver, "Path to archiver");
     /*if path_to_file_is_valid(path_archiver, "Path to archiver") {
@@ -441,7 +458,7 @@ fn main() {
         xil_bsp_source_paths.push(path.clone());
     }
 
-    let bindings = generate_bindings(&path_libc, &path_stdint, &path_xil_headers, &path_wrapper);
+    let bindings = generate_bindings(&path_inc, &path_lib, &path_xil_headers, &path_wrapper);
     println!("cargo:warning=Bindings generated!");
 
     // Write the bindings to the $OUT_DIR/bindings.rs file.

@@ -5,6 +5,7 @@ pub fn validate_path_to_directory(path: &PathBuf, description: &str) {
     if path.exists() && path.is_dir() {
         return;
     }
+    println!("cargo:warning=LOL");
     exit(EXIT_FAILURE);
 
     /*match path.try_exists() {
@@ -44,6 +45,7 @@ pub fn validate_path_to_file(path: &PathBuf, description: &str) {
     if path.exists() && path.is_file() {
         return;
     }
+    println!("cargo:warning=ASD");
     exit(EXIT_FAILURE);
     /*
     match path.try_exists() {
