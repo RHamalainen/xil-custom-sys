@@ -1,0 +1,4 @@
+[build]
+# Compile for ARM Cortex-A9 (soft-float ABI).
+# https://doc.rust-lang.org/nightly/rustc/platform-support.html
+target = "armv7a-none-eabi"

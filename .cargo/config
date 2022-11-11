@@ -1,7 +1,0 @@
-#[target.armv7a-none-eabi]
-#linker = "/home/roni/xilinx/Vitis/2022.2/gnu/aarch32/lin/gcc-arm-none-eabi/bin/arm-none-eabi-gcc"
-
-[build]
-# Compile for Cortex-A9 (soft-float ABI). This is a Tier 2 target for Rust as per
-# https://forge.rust-lang.org/release/platform-support.html
-target = "armv7a-none-eabi"
