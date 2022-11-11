@@ -20,6 +20,7 @@ pub const XPAR_XTTCPS_1_INTR: u32 = XPS_TTC0_1_INT_ID;
 pub unsafe fn Xil_ExceptionEnable() {
     Xil_ExceptionEnableMask(XIL_EXCEPTION_IRQ)
 }
+
 /// Disable the IRQ exception.
 ///
 /// # Safety
@@ -47,6 +48,7 @@ pub unsafe fn Xil_ExceptionEnableMask(Mask: u32) {
         v = in(reg) v,
     );
 }
+
 /// # Safety
 /// Writing to a register is unsafe.
 pub unsafe fn Xil_ExceptionDisableMask(Mask: u32) {
@@ -74,6 +76,7 @@ pub unsafe fn Xil_ExceptionDisableMask(Mask: u32) {
 pub unsafe fn XTtcPs_GetInterruptStatus(InstancePtr: *mut XTtcPs) -> u32 {
     InstReadReg(InstancePtr, XTTCPS_ISR_OFFSET)
 }
+
 /// # Safety
 /// Passing a null-ptr as `InstancePtr`is undefined behavior.
 pub unsafe fn XTtcPs_EnableInterrupts(InstancePtr: *mut XTtcPs, InterruptMask: u32) {
@@ -83,16 +86,19 @@ pub unsafe fn XTtcPs_EnableInterrupts(InstancePtr: *mut XTtcPs, InterruptMask: u
         InstReadReg(InstancePtr, XTTCPS_IER_OFFSET) | InterruptMask,
     );
 }
+
 /// # Safety
 /// Passing a null-ptr as `InstancePtr`is undefined behavior.
 pub unsafe fn XTtcPs_SetInterval(InstancePtr: *mut XTtcPs, Value: u32) {
     InstWriteReg(InstancePtr, XTTCPS_INTERVAL_VAL_OFFSET, Value);
 }
+
 /// # Safety
 /// Passing a null-ptr as `InstancePtr`is undefined behavior.
 pub unsafe fn XTtcPs_ClearInterruptStatus(InstancePtr: *mut XTtcPs, InterruptMask: u32) {
     InstWriteReg(InstancePtr, XTTCPS_ISR_OFFSET as u32, InterruptMask)
 }
+
 /**
  * This function starts the counter/timer without resetting the counter
  * value.
@@ -106,7 +112,7 @@ pub unsafe fn XTtcPs_ClearInterruptStatus(InstancePtr: *mut XTtcPs, InterruptMas
  *
  * # Safety
  * Passing a null-ptr as `InstancePtr`is undefined behavior.
- *****************************
+ *********************
  * **** */
 pub unsafe fn XTtcPs_Start(InstancePtr: *mut XTtcPs) {
     InstWriteReg(

@@ -5,7 +5,7 @@ mod validators;
 use bindgen::Bindings;
 use glob::glob;
 use itertools::Itertools;
-use std::ffi::{OsStr, OsString};
+use std::ffi::OsStr;
 use std::{collections::HashSet, env, iter::FromIterator, path::PathBuf, process::exit};
 use validators::{validate_path_to_directory, validate_path_to_file};
 
@@ -253,7 +253,8 @@ fn compile(
     path_compiler: &PathBuf,
     path_xil_headers: &PathBuf,
     xil_bsp_header_search_paths: Vec<PathBuf>,
-    xil_bsp_source_paths: Vec<PathBuf>,
+    // TODO: removeme
+    _xil_bsp_source_paths: Vec<PathBuf>,
 ) {
     //let mut c_files = Vec::new();
     let mut builder = cc::Build::new();
@@ -299,6 +300,8 @@ fn compile(
         .flag("-mfloat-abi=soft")
         // Disable generation of standard runtime.
         .flag("-nostartfiles")
+        .flag("-fno-exceptions")
+        //.flag("-Wall")
         .opt_level_str("2")
         // Compile or assemble the source files, but do not link.
         // Generates object file for each source file.
